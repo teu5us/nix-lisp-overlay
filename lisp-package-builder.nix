@@ -35,7 +35,7 @@ stdenv.mkDerivation rec {
 
   buildPhase = ''
     export ASDF_OUTPUT_TRANSLATIONS="$(pwd)/:$(pwd)/translations/"
-    export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$(pwd)/"
+    export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$(pwd)//"
     ${compiler}/bin/${compiler.pname} \
       --load "${asdf}/lib/common-lisp/asdf/build/asdf.lisp" \
       --eval "(asdf:compile-system :${pname})" \
