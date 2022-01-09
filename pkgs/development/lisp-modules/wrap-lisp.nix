@@ -1,4 +1,6 @@
-pkgs: packageSet: compiler: f:
+{ pkgs, packageSet, compiler }:
+
+f:
 
 with pkgs;
 
