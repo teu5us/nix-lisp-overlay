@@ -5,17 +5,17 @@ f:
 with pkgs;
 
 let
-  makeLispPath = import ./make-lisp-path.nix pkgs;
-  packages = f packageSet;
+  lispInputs = f packageSet;
+  asdfHook = (pkgs.callPackage ./setup-hook.nix {}) lispInputs;
 in
 symlinkJoin {
   name = "${compiler.name}-with-packages";
-  nativeBuildInputs = [ makeWrapper ];
+  nativeBuildInputs = [ makeWrapper asdfHook ];
   buildInputs = [ asdf ];
   paths = [ compiler ];
   postBuild = ''
     wrapProgram $out/bin/${compiler.pname} \
-      --set "CL_SOURCE_REGISTRY" "${makeLispPath packages}" \
+      --set "CL_SOURCE_REGISTRY" "$CL_SOURCE_REGISTRY" \
       --add-flags "--load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\""
   '';
 }

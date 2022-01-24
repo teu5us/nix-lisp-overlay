@@ -8,25 +8,26 @@
 , nativeBuildInputs ? []
 , buildInputs ? []
 , propagatedBuildInputs ? []
-, preBuild ? ""
 , sourceRoot ? "."
-, includedFiles ? [] }:
+, includedFiles ? [],
+...} @ attrs:
 
 let
   stdenv = pkgs.stdenv;
   lib = pkgs.lib;
-  makeAsdPath = import ./make-lisp-path.nix pkgs;
-  nbi = nativeBuildInputs ++ [ compiler asdf ];
+  asdfHook = (pkgs.callPackage ./setup-hook.nix { }) lispInputs;
 in
-stdenv.mkDerivation rec {
-  inherit pname version name src compiler buildInputs propagatedBuildInputs lispInputs preBuild;
+stdenv.mkDerivation {
+  inherit pname version name src compiler buildInputs;
 
-  nativeBuildInputs = nbi;
+  nativeBuildInputs = nativeBuildInputs ++ [ compiler asdf asdfHook ];
+
+  propagatedBuildInputs = propagatedBuildInputs ++ lispInputs;
 
   buildPhase = ''
     export CPATH="$CPATH:${lib.makeSearchPath "include" (nativeBuildInputs ++ buildInputs ++ propagatedBuildInputs)}"
-    export ASDF_OUTPUT_TRANSLATIONS="${builtins.storeDir}/:${builtins.storeDir}"
-    export CL_SOURCE_REGISTRY="${makeAsdPath lispInputs}:$(pwd)//"
+    # export ASDF_OUTPUT_TRANSLATIONS="${builtins.storeDir}/:${builtins.storeDir}"
+    export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$(pwd)//"
     ${compiler}/bin/${compiler.pname} \
       --load "${asdf}/lib/common-lisp/asdf/build/asdf.lisp" \
       --eval "(asdf:compile-system :${pname})" \
