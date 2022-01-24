@@ -11,7 +11,7 @@ in
 stdenv.mkDerivation {
   name = "${compiler.name}-with-packages";
   nativeBuildInputs = [ makeWrapper asdfHook ];
-  buildInputs = [ asdf compiler ];
+  buildInputs = [ asdf compiler ] ++ lispInputs;
   src = compiler;
   phases = [ "buildPhase" "installPhase" ];
   buildPhase = ''
