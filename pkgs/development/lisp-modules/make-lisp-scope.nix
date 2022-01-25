@@ -4,16 +4,20 @@ compiler:
 
 let
   lib = pkgs.lib;
+  stdenv = pkgs.stdenv;
   fetchgit = pkgs.fetchgit;
   newScope = pkgs.newScope;
   scope = lib.customisation.makeScope newScope (self: with self; {
     inherit compiler;
 
+    resolveLispInputs = callPackage ./resolve-lisp-inputs.nix
+      { inherit scope lib; };
+
     lispWithPackages = callPackage ./wrap-lisp.nix
-      { inherit pkgs compiler; packageSet = scope; };
+      { inherit pkgs compiler resolveLispInputs; };
 
     buildLispPackage = callPackage ./lisp-package-builder.nix
-      { inherit pkgs compiler asdf; };
+      { inherit stdenv lib compiler asdf resolveLispInputs scope; };
 
     asdf = pkgs.asdf;
 
@@ -37,7 +41,7 @@ let
         sha256 = "1114iibrds8rvwn4zrqnmvm8mvbgdzbrka53dxs1q61ajv44x8i0";
         rev = "3898e09f8047ef89113df265574ae8de8afa31ac";
       };
-      lispInputs = [ alexandria ];
+      lispInputs = [ "alexandria" ];
     };
   });
 in scope
