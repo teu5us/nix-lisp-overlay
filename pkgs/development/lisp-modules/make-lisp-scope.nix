@@ -11,7 +11,7 @@ let
     inherit compiler;
 
     resolveLispInputs = callPackage ./resolve-lisp-inputs.nix
-      { inherit scope lib; };
+      { inherit scope; };
 
     lispWithPackages = callPackage ./wrap-lisp.nix
       { inherit pkgs compiler resolveLispInputs; };
