@@ -11,7 +11,7 @@ let
     inherit compiler;
 
     resolveLispInputs = callPackage ./resolve-lisp-inputs.nix
-      { inherit scope; };
+      { inherit lib scope; };
 
     lispWithPackages = callPackage ./wrap-lisp.nix
       { inherit pkgs compiler resolveLispInputs; };
@@ -31,6 +31,7 @@ let
         rev = "a67c3a6cc99d5d5180ce70985c04ddd91026104b";
         sha256 = "0q0ygiiql8gpap7g577shaibwgjcgw46i7j8mi4nd2np29z8kbca";
       };
+      providedSystems = [ "alexandria" "alexandria-tests" ];
     };
 
     trivial-with-current-source-form = buildLispPackage {

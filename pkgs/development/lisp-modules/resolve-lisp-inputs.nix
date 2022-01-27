@@ -1,26 +1,20 @@
-{ scope }:
+{ lib, scope }:
 
 inputs:
 
 with builtins;
 
 let
-  pnames = attrNames scope;
-  required = filter (pname:
-    let
-      package = scope.${pname};
-    in
-    if (isAttrs package) && (hasAttr "providedSystems" package)
+  required = lib.filterAttrs (n: v:
+    if (isAttrs v) && (hasAttr "providedSystems" v)
       then
         any (input:
-          elem input package.providedSystems
+          elem input v.providedSystems
         ) inputs
       else
         false
-  ) pnames;
-  requiredPackages = map (pname: getAttr pname scope) required;
-  requiredPackagesSystems =
-    concatMap (package: package.providedSystems) requiredPackages;
+  ) scope;
+  requiredSystems = concatMap (p: p.providedSystems) (attrValues required);
 in
-assert all (input: elem input requiredPackagesSystems) inputs;
-requiredPackages
+assert all (input: elem input requiredSystems) inputs;
+attrValues required
