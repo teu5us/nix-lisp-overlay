@@ -9,7 +9,7 @@ let
     (lib.filterAttrs
       (n: v:
         if
-          (isAttrs v) && (hasAttr "providedSystems" v)
+          (lib.isDerivation v) && (hasAttr "providedSystems" v)
         then
           any (input:
             elem input v.providedSystems
@@ -18,7 +18,17 @@ let
           false)
       scope);
   requiredSystems = concatMap (p: p.providedSystems) required;
-  allPackagesFound = all (input: elem input requiredSystems) inputs;
+  inputsFound = lib.zipLists inputs
+    (map (input: elem input requiredSystems) inputs);
 in
-assert allPackagesFound;
-required
+if all (input: input.snd) inputsFound
+  then
+    required
+  else
+    let
+      notFound = filter (input: !input.snd) inputsFound;
+    in
+      throw ''
+        Packages were not found for systems:
+          ${lib.concatStringsSep ", " (map (input: "\"" + input.fst + "\"") notFound)}
+      ''
