@@ -1,4 +1,11 @@
-{ stdenv, lib, scope, compiler, asdf, resolveLispInputs, runCommand }:
+{ stdenv
+, lib
+, scope
+, compiler
+, asdf
+, resolveLispInputs
+, runCommand
+, setJavaClassPath }:
 
 { pname
 , version
@@ -6,7 +13,6 @@
 , providedSystems ? [ pname ]
 , src
 , lispInputs ? []
-, nativeBuildInputs ? []
 , buildInputs ? []
 , propagatedBuildInputs ? []
 , sourceRoot ? "."
@@ -19,14 +25,17 @@ let
   asdfHook = asdfHookFun resolvedLispInputs;
 in
 stdenv.mkDerivation {
-  inherit pname version name src compiler buildInputs providedSystems;
+  inherit pname version name src compiler providedSystems;
 
-  nativeBuildInputs = nativeBuildInputs ++ [ compiler asdf asdfHook ];
+  buildInputs =
+    buildInputs
+    ++ [ compiler asdf asdfHook ]
+    ++ (lib.optional (compiler.pname == "abcl") setJavaClassPath);
 
   propagatedBuildInputs = propagatedBuildInputs ++ resolvedLispInputs;
 
   buildPhase = ''
-    export CPATH="$CPATH:${lib.makeSearchPath "include" (nativeBuildInputs ++ buildInputs ++ propagatedBuildInputs)}"
+    export CPATH="$CPATH:${lib.makeSearchPath "include" buildInputs}"
     export ASDF_OUTPUT_TRANSLATIONS="$src:$(pwd):${builtins.storeDir}:${builtins.storeDir}"
     export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$(pwd)//"
     ${compiler}/bin/${compiler.pname} <<EOF
