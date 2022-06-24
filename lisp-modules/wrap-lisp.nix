@@ -1,16 +1,17 @@
-{ stdenv, makeWrapper, resolveLispInputs, compiler, runCommand, asdf }:
+{ stdenv, makeWrapper, compiler, runCommand, packageSet }:
 
-lispInputs:
+f:
 
 let
-  resolvedLispInputs = resolveLispInputs lispInputs;
+  asdf = packageSet.asdf;
+  packages = f packageSet;
   asdfHookFun = import ./setup-hook.nix runCommand;
-  asdfHook = asdfHookFun resolvedLispInputs;
+  asdfHook = asdfHookFun packages;
 in
 stdenv.mkDerivation {
   name = "${compiler.name}-with-packages";
   nativeBuildInputs = [ makeWrapper asdfHook ];
-  buildInputs = [ asdf compiler ] ++ resolvedLispInputs;
+  buildInputs = [ asdf compiler ] ++ packages;
   src = compiler;
   phases = [ "buildPhase" "installPhase" ];
   buildPhase = ''

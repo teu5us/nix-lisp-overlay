@@ -24,9 +24,6 @@ let
     resolveLispInputs = callPackage ./resolve-lisp-inputs.nix
       { inherit lib scope; };
 
-    lispWithPackages = callPackage ./wrap-lisp.nix
-      { inherit compiler resolveLispInputs runCommand; };
-
     buildLispPackage = callPackage ./lisp-package-builder.nix
       { inherit stdenv lib compiler asdf resolveLispInputs scope; };
 
@@ -73,4 +70,10 @@ let
 
     uiop = asdf;
   });
-in scope // (scope.setFromDir ./packages)
+in let
+  mergedWithPackages = scope // (scope.setFromDir ./packages);
+  scopeWithPackages = mergedWithPackages // {
+    withPackages = mergedWithPackages.callPackage ./wrap-lisp.nix
+      { inherit compiler runCommand; packageSet = scopeWithPackages; };
+  };
+in scopeWithPackages

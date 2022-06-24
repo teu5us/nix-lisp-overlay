@@ -4,5 +4,5 @@ let
   callPackage = pkgs.callPackage;
 in
 {
-  lispPackages = callPackage ./lisp-modules {};
+  newLispPackages = callPackage ./lisp-modules {};
 }
