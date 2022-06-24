@@ -1,12 +1,10 @@
-{ pkgs, resolveLispInputs, compiler }:
+{ stdenv, makeWrapper, resolveLispInputs, compiler, runCommand, asdf }:
 
 lispInputs:
 
-with pkgs;
-
 let
   resolvedLispInputs = resolveLispInputs lispInputs;
-  asdfHookFun = import ./setup-hook.nix pkgs.runCommand;
+  asdfHookFun = import ./setup-hook.nix runCommand;
   asdfHook = asdfHookFun resolvedLispInputs;
 in
 stdenv.mkDerivation {

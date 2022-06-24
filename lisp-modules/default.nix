@@ -1,7 +1,7 @@
 { pkgs }:
 
 let
-  packagesFor = pkgs.callPackage ./make-lisp-scope.nix { inherit pkgs; };
+  packagesFor = pkgs.callPackage ./make-lisp-scope.nix {};
 in
 {
   sbcl = packagesFor pkgs.sbcl;

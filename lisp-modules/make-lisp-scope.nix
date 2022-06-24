@@ -1,48 +1,76 @@
-{ pkgs }:
+{ lib, stdenv, newScope, asdf, runCommand }:
 
 compiler:
 
 let
-  lib = pkgs.lib;
-  stdenv = pkgs.stdenv;
-  fetchgit = pkgs.fetchgit;
-  newScope = pkgs.newScope;
+  list_NonRecursive = t:
+    with lib;
+    dir: mapAttrsToList (name: type: name)
+      (filterAttrs (name: type: type == t)
+        (builtins.readDir dir));
+
+  listDirsNonRecursive = dir:
+    map (name: dir + ("/" + name)) (list_NonRecursive "directory" dir);
+
+  listFilesNonRecursive = dir: list_NonRecursive "regular" dir;
+
+  filename = path: lib.last (lib.splitString "/" (toString path));
+
   scope = lib.customisation.makeScope newScope (self: with self; {
-    inherit compiler;
+    inherit compiler asdf;
+
+    callPackage = self.callPackage;
 
     resolveLispInputs = callPackage ./resolve-lisp-inputs.nix
       { inherit lib scope; };
 
     lispWithPackages = callPackage ./wrap-lisp.nix
-      { inherit pkgs compiler resolveLispInputs; };
+      { inherit compiler resolveLispInputs runCommand; };
 
     buildLispPackage = callPackage ./lisp-package-builder.nix
       { inherit stdenv lib compiler asdf resolveLispInputs scope; };
 
-    asdf = pkgs.asdf;
+    setFromDir = dir:
+      let
+        dirs = listDirsNonRecursive dir;
+        dirnames = map filename dirs;
+        overlaps = lib.any
+          (name: builtins.elem name (lib.attrNames self))
+          dirnames;
+        set = lib.listToAttrs
+          (map (dir':
+            {
+              name = filename dir';
+              value = {
+                path = dir';
+                files = listFilesNonRecursive dir';
+              };
+            }
+          ) dirs);
+        buildPackageSet =
+          lib.filterAttrs (name: value: value != null)
+            (
+              lib.mapAttrs (name: value:
+                let
+                  package = if builtins.elem "default.nix" value.files
+                            then callPackage value.path {}
+                            else null;
+                  fixup = if builtins.elem "fixup.nix" value.files
+                          then callPackage
+                            (value.path + "/fixup.nix") {}
+                          else null;
+                  applyFixup = package: if fixup != null
+                                        then fixup package
+                                        else package;
+                in
+                  if package != null then applyFixup package else null
+              ) set
+            );
+      in
+        if overlaps
+        then throw "Common Lisp package names should not overlap with the base set."
+        else buildPackageSet;
 
-    uiop = pkgs.asdf;
-
-    alexandria = buildLispPackage {
-      pname = "alexandria";
-      version = "1.0.1";
-      src = fetchgit {
-        url = "https://gitlab.common-lisp.net/alexandria/alexandria.git";
-        rev = "a67c3a6cc99d5d5180ce70985c04ddd91026104b";
-        sha256 = "0q0ygiiql8gpap7g577shaibwgjcgw46i7j8mi4nd2np29z8kbca";
-      };
-      providedSystems = [ "alexandria" "alexandria-tests" ];
-    };
-
-    trivial-with-current-source-form = buildLispPackage {
-      pname = "trivial-with-current-source-form";
-      version = "0.1.0";
-      src = fetchgit {
-        url = "https://github.com/scymtym/trivial-with-current-source-form.git";
-        sha256 = "1114iibrds8rvwn4zrqnmvm8mvbgdzbrka53dxs1q61ajv44x8i0";
-        rev = "3898e09f8047ef89113df265574ae8de8afa31ac";
-      };
-      lispInputs = [ "alexandria" ];
-    };
+    uiop = asdf;
   });
-in scope
+in scope // (scope.setFromDir ./packages)
