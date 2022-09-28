@@ -1,9 +1,14 @@
 { pkgs }:
 
 let
-  packagesFor = pkgs.callPackage ./make-lisp-scope.nix {};
+  scope = pkgs.callPackage ./make-lisp-scope.nix {};
 in
-{
-  sbcl = packagesFor pkgs.sbcl;
-  ccl = packagesFor pkgs.ccl;
+rec {
+  inherit (scope) packagesFor withPackages;
+
+  sbclPackages = packagesFor pkgs.sbcl;
+  cclPackages = packagesFor pkgs.ccl;
+
+  sbclWithPackages = withPackages pkgs.sbcl;
+  cclWithPackages = withPackages pkgs.ccl;
 }

@@ -1,7 +1,9 @@
-{ buildLispPackage }:
+{ buildLispPackage, ubiquitous }:
 
 buildLispPackage {
   pname = "cl2nix";
   version = "dev";
-  src = ../../../../cl2nix;
+  src = ./.;
+  providedSystems = [ "cl2nix" ];
+  lispInputs = [ ubiquitous ];
 }

@@ -1,39 +1,35 @@
-{ stdenv, makeWrapper, compiler, runCommand, packageSet }:
+{ lib, stdenv, makeWrapper, compiler, runCommand, pkg-config, scope }:
 
 f:
 
+{ extras ? [] }:
+
 let
-  asdf = packageSet.asdf;
-  packages = f packageSet;
-  asdfHookFun = import ./setup-hook.nix runCommand;
-  asdfHook = asdfHookFun packages;
+  asdf = scope.asdf;
+  lispInputs = f scope;
+  asdfHook = import ./setup-hook.nix runCommand;
 in
 stdenv.mkDerivation {
   name = "${compiler.name}-with-packages";
-  nativeBuildInputs = [ makeWrapper asdfHook ];
-  buildInputs = [ asdf compiler ] ++ packages;
-  src = compiler;
+  nativeBuildInputs = [ makeWrapper pkg-config ];
+  buildInputs = [ compiler asdfHook ] ++ extras;
+  src = null;
   phases = [ "buildPhase" "installPhase" ];
   buildPhase = ''
-    makeWrapper $src/bin/${compiler.pname} ./${compiler.pname} \
+    buildPathsForLisp "${toString lispInputs}" "${toString extras}"
+    makeWrapper ${compiler}/bin/${compiler.pname} ./${compiler.pname} \
       --set "CL_SOURCE_REGISTRY" "$CL_SOURCE_REGISTRY" \
-      --set ASDF_OUTPUT_TRANSLATIONS "${builtins.storeDir}/:${builtins.storeDir}" \
-      --add-flags "--load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\""
+      --set ASDF_OUTPUT_TRANSLATIONS "$ASDF_OUTPUT_TRANSLATIONS" \
+      --set LD_LIBRARY_PATH "$LD_LIBRARY_PATH" \
+      --set CPATH "$CPATH" \
+      --set PKG_CONFIG_PATH "$PKG_CONFIG_PATH" \
+      --set PATH "$PATH_FOR_LISP" \
+      --add-flags ${if lib.elem compiler.pname ["sbcl" "ccl"]
+                    then "--eval --add-flags \"'(require :asdf)'\""
+                    else "--load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\""}
   '';
   installPhase = ''
     mkdir -p $out/bin
     cp ${compiler.pname} $out/bin
   '';
 }
-
-# symlinkJoin {
-#   name = "${compiler.name}-with-packages";
-#   nativeBuildInputs = [ makeWrapper asdfHook ];
-#   buildInputs = [ asdf ];
-#   paths = [ compiler ];
-#   postBuild = ''
-#     wrapProgram $out/bin/${compiler.pname} \
-#       --set "CL_SOURCE_REGISTRY" "$CL_SOURCE_REGISTRY" \
-#       --add-flags "--load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\""
-#   '';
-# }

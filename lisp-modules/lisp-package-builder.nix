@@ -1,56 +1,71 @@
 { stdenv
 , lib
-, scope
 , compiler
 , asdf
-, resolveLispInputs
 , runCommand
 , setJavaClassPath }:
 
 { pname
-, version
+, version ? "NIL"
 , name ? "${pname}-${version}_${compiler.pname}-${compiler.version}"
-, providedSystems ? [ pname ]
 , src
+, providedSystems ? [ pname ]
 , lispInputs ? []
+, nativeBuildInputs ? []
 , buildInputs ? []
 , propagatedBuildInputs ? []
 , sourceRoot ? "."
-, includedFiles ? [],
-...} @ attrs:
+, includedFiles ? []
+, patches ? []
+, ...}:
 
-let
-  resolvedLispInputs = resolveLispInputs lispInputs;
-  asdfHookFun = import ./setup-hook.nix runCommand;
-  asdfHook = asdfHookFun resolvedLispInputs;
+stdenv.mkDerivation (final: let
+  asdfHook = import ./setup-hook.nix runCommand;
 in
-stdenv.mkDerivation {
-  inherit pname version name src compiler providedSystems;
+  {
+  inherit pname version name src compiler lispInputs propagatedBuildInputs patches;
 
   buildInputs =
     buildInputs
-    ++ [ compiler asdf asdfHook ]
+    ++ [ compiler asdfHook ]
+    ++ (lib.optional (lib.all (el: el != compiler.pname) ["sbcl" "ccl"]) asdf)
     ++ (lib.optional (compiler.pname == "abcl") setJavaClassPath);
 
-  propagatedBuildInputs = propagatedBuildInputs ++ resolvedLispInputs;
-
-  buildPhase = ''
-    export CPATH="$CPATH:${lib.makeSearchPath "include" buildInputs}"
-    export ASDF_OUTPUT_TRANSLATIONS="$src:$(pwd):${builtins.storeDir}:${builtins.storeDir}"
-    export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$(pwd)//"
+  buildPhase = with builtins; ''
+    runHook preBuild
+    # see ./setup-hook.sh
+    buildPathsForLisp "${toString final.lispInputs}" "${toString final.buildInputs}" "${toString final.propagatedBuildInputs}"
+    export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$src//"
+    export ASDF_OUTPUT_TRANSLATIONS="$ASDF_OUTPUT_TRANSLATIONS:$src/:$(pwd)/"
+    echo CL_SOURCE_REGISTRY $CL_SOURCE_REGISTRY
+    echo ASDF_OUTPUT_TRANSLATIONS $ASDF_OUTPUT_TRANSLATIONS
+    echo LD_LIBRARY_PATH $LD_LIBRARY_PATH
+    export HOME=$(pwd)
     ${compiler}/bin/${compiler.pname} <<EOF
-      (load "${asdf}/lib/common-lisp/asdf/build/asdf.lisp")
-      (dolist (system '(${lib.concatStringsSep " " providedSystems}))
-        (asdf:compile-system system)
-        (asdf:load-system system))
+      ${if lib.elem compiler.pname ["sbcl" "ccl"]
+        then "(require :asdf)"
+        else "(load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\")"}
+
+      (handler-case
+        (dolist (s '(${lib.concatStringsSep " " providedSystems}))
+          ;; (asdf:compile-system s)
+          (asdf:load-system s))
+        (error (c)
+          (princ c)
+          (uiop:quit 1)))
     EOF
+    runHook postBuild
   '';
 
   installPhase = ''
+    runHook preInstall
     output="$out/lib/common-lisp/${pname}"
     mkdir -p "$output"
     cp -r * "$output"/
+    mkdir -p $out/nix-support
+    printWords ${builtins.toString final.lispInputs} > $out/nix-support/lisp-inputs
+    runHook postInstall
   '';
 
   dontConfigure = true;
-}
+})

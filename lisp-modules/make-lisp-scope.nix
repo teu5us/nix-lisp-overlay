@@ -1,6 +1,4 @@
-{ lib, stdenv, newScope, asdf, runCommand }:
-
-compiler:
+{ pkgs, lib, stdenv, newScope, asdf, runCommand }:
 
 let
   list_NonRecursive = t:
@@ -16,64 +14,33 @@ let
 
   filename = path: lib.last (lib.splitString "/" (toString path));
 
-  scope = lib.customisation.makeScope newScope (self: with self; {
+  scope = compiler: lib.customisation.makeScope newScope (self: with self; {
     inherit compiler asdf;
 
-    callPackage = self.callPackage;
-
-    resolveLispInputs = callPackage ./resolve-lisp-inputs.nix
-      { inherit lib scope; };
-
-    buildLispPackage = callPackage ./lisp-package-builder.nix
-      { inherit stdenv lib compiler asdf resolveLispInputs scope; };
-
-    setFromDir = dir:
-      let
-        dirs = listDirsNonRecursive dir;
-        dirnames = map filename dirs;
-        overlaps = lib.any
-          (name: builtins.elem name (lib.attrNames self))
-          dirnames;
-        set = lib.listToAttrs
-          (map (dir':
-            {
-              name = filename dir';
-              value = {
-                path = dir';
-                files = listFilesNonRecursive dir';
-              };
-            }
-          ) dirs);
-        buildPackageSet =
-          lib.filterAttrs (name: value: value != null)
-            (
-              lib.mapAttrs (name: value:
-                let
-                  package = if builtins.elem "default.nix" value.files
-                            then callPackage value.path {}
-                            else null;
-                  fixup = if builtins.elem "fixup.nix" value.files
-                          then callPackage
-                            (value.path + "/fixup.nix") {}
-                          else null;
-                  applyFixup = package: if fixup != null
-                                        then fixup package
-                                        else package;
-                in
-                  if package != null then applyFixup package else null
-              ) set
-            );
-      in
-        if overlaps
-        then throw "Common Lisp package names should not overlap with the base set."
-        else buildPackageSet;
-
     uiop = asdf;
+
+    buildLispPackage = (self.callPackage ./lisp-package-builder.nix
+        { inherit stdenv lib compiler asdf; });
+
+    cl2nix = callPackage ./packages/cl2nix {};
+    ubiquitous = callPackage ./packages/ubiquitous {};
+    alexandria = callPackage ./packages/alexandria {};
+    trivial-features = callPackage ./packages/trivial-features {};
+    trivial-gray-streams = callPackage ./packages/trivial-gray-streams {};
+    babel = callPackage ./packages/babel {};
+    cl-ppcre = callPackage ./packages/cl-ppcre {};
+    cl-json = callPackage ./packages/cl-json {};
+    cffi = callPackage ./packages/cffi {};
   });
-in let
-  mergedWithPackages = scope // (scope.setFromDir ./packages);
-  scopeWithPackages = mergedWithPackages // {
-    withPackages = mergedWithPackages.callPackage ./wrap-lisp.nix
-      { inherit compiler runCommand; packageSet = scopeWithPackages; };
-  };
-in scopeWithPackages
+in rec {
+  packagesFor = compiler:
+    (scope compiler).overrideScope' (self': super': {
+      cffi = super'.cffi.overrideAttrs (oa: {
+        nativeBuildInputs = [ pkgs.pkg-config ];
+        propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libffi pkgs.libffi.dev pkgs.gcc ];
+      });
+    });
+
+  withPackages = compiler: pkgs.callPackage ./wrap-lisp.nix
+    { inherit compiler; scope = packagesFor compiler; };
+}

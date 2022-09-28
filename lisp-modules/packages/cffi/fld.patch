@@ -1,0 +1,13 @@
+diff --git a/src/libraries.lisp b/src/libraries.lisp
+index dcbd206..b117bf2 100644
+--- a/src/libraries.lisp
++++ b/src/libraries.lisp
+@@ -65,7 +65,7 @@
+         (explode-path-environment-variable "DYLD_LIBRARY_PATH")
+         (uiop:getcwd)
+         (darwin-fallback-library-path))
+-      '())
++      '((explode-path-environment-variable "LD_LIBRARY_PATH")))
+   "List onto which user-defined library paths can be pushed.")
+ 
+ (defun fallback-darwin-framework-directories ()
