@@ -19,14 +19,13 @@
 , patches ? []
 , ...}:
 
-stdenv.mkDerivation (final: let
+let
   asdfHook = import ./setup-hook.nix runCommand;
 in
-  {
+stdenv.mkDerivation (final: {
   inherit pname version name src compiler lispInputs propagatedBuildInputs patches;
 
-  buildInputs =
-    buildInputs
+  buildInputs = buildInputs
     ++ [ compiler asdfHook ]
     ++ (lib.optional (!lib.elem compiler.pname ["sbcl" "ccl"]) asdf)
     ++ (lib.optional (compiler.pname == "abcl") setJavaClassPath);
