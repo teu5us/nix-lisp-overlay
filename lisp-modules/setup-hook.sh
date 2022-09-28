@@ -76,4 +76,5 @@ _addToExternalPath () {
     fi
 }
 
+# NOTE: we call buildLispPathsForLisp manually in buildPhase to avoid recursion
 # addEnvHooks "$targetOffset" buildPathsForLisp

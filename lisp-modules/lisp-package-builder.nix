@@ -28,18 +28,17 @@ in
   buildInputs =
     buildInputs
     ++ [ compiler asdfHook ]
-    ++ (lib.optional (lib.all (el: el != compiler.pname) ["sbcl" "ccl"]) asdf)
+    ++ (lib.optional (!lib.elem compiler.pname ["sbcl" "ccl"]) asdf)
     ++ (lib.optional (compiler.pname == "abcl") setJavaClassPath);
 
   buildPhase = with builtins; ''
     runHook preBuild
     # see ./setup-hook.sh
-    buildPathsForLisp "${toString final.lispInputs}" "${toString final.buildInputs}" "${toString final.propagatedBuildInputs}"
+    buildPathsForLisp "${toString final.lispInputs}" \
+      "${toString final.buildInputs}" \
+      "${toString final.propagatedBuildInputs}"
     export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$src//"
     export ASDF_OUTPUT_TRANSLATIONS="$ASDF_OUTPUT_TRANSLATIONS:$src/:$(pwd)/"
-    echo CL_SOURCE_REGISTRY $CL_SOURCE_REGISTRY
-    echo ASDF_OUTPUT_TRANSLATIONS $ASDF_OUTPUT_TRANSLATIONS
-    echo LD_LIBRARY_PATH $LD_LIBRARY_PATH
     export HOME=$(pwd)
     ${compiler}/bin/${compiler.pname} <<EOF
       ${if lib.elem compiler.pname ["sbcl" "ccl"]
@@ -48,7 +47,6 @@ in
 
       (handler-case
         (dolist (s '(${lib.concatStringsSep " " providedSystems}))
-          ;; (asdf:compile-system s)
           (asdf:load-system s))
         (error (c)
           (princ c)
