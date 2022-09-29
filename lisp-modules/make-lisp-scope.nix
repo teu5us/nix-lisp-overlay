@@ -14,32 +14,35 @@ let
 
   filename = path: lib.last (lib.splitString "/" (toString path));
 
-  scope = compiler: lib.customisation.makeScope newScope (self: with self; {
-    inherit compiler asdf;
+  releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+  overrides = import ./overrides.nix { inherit pkgs lib; };
+
+  scope = compiler: lib.customisation.makeScope newScope (self: with self;
+    let
+      buildLispPackage = (self.callPackage ./lisp-package-builder.nix
+        { inherit (self) compiler asdf resolveLispInputs;
+          inherit stdenv lib;
+        });
+    in
+    {
+    inherit compiler asdf buildLispPackage;
 
     uiop = asdf;
 
-    buildLispPackage = (self.callPackage ./lisp-package-builder.nix
-        { inherit stdenv lib compiler asdf; });
-
-    cl2nix = callPackage ./packages/cl2nix {};
-    ubiquitous = callPackage ./packages/ubiquitous {};
-    alexandria = callPackage ./packages/alexandria {};
-    trivial-features = callPackage ./packages/trivial-features {};
-    trivial-gray-streams = callPackage ./packages/trivial-gray-streams {};
-    babel = callPackage ./packages/babel {};
-    cl-ppcre = callPackage ./packages/cl-ppcre {};
-    cl-json = callPackage ./packages/cl-json {};
-    cffi = callPackage ./packages/cffi {};
-  });
+    # cl2nix = callPackage ./packages/cl2nix {};
+    # ubiquitous = callPackage ./packages/ubiquitous {};
+    # alexandria = callPackage ./packages/alexandria {};
+    # trivial-features = callPackage ./packages/trivial-features {};
+    # trivial-gray-streams = callPackage ./packages/trivial-gray-streams {};
+    # babel = callPackage ./packages/babel {};
+    # cl-ppcre = callPackage ./packages/cl-ppcre {};
+    # cl-json = callPackage ./packages/cl-json {};
+    # cffi = callPackage ./packages/cffi {};
+    } // lib.mapAttrs (n: v: buildLispPackage v) releases);
 in rec {
   packagesFor = compiler:
-    (scope compiler).overrideScope' (self': super': {
-      cffi = super'.cffi.overrideAttrs (oa: {
-        nativeBuildInputs = [ pkgs.pkg-config ];
-        propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libffi pkgs.libffi.dev pkgs.gcc ];
-      });
-    });
+    overrides (scope compiler);
 
   withPackages = compiler: pkgs.callPackage ./wrap-lisp.nix
     { inherit compiler; scope = packagesFor compiler; };
