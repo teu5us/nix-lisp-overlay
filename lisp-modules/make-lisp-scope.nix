@@ -50,5 +50,5 @@ in rec {
     overrides (scope compiler);
 
   withPackages = compiler: pkgs.callPackage ./wrap-lisp.nix
-    { inherit compiler confBuilders; scope = packagesFor compiler; };
+    { inherit compiler; scope = packagesFor compiler; };
 }
