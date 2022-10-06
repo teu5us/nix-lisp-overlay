@@ -3,12 +3,10 @@
 with pkgs // (import ./. { inherit pkgs; });
 
 let
-  lisp = newLispPackages.sbclWithPackages (lp: with lp; [
-    cl2nix
-    cffi
-  ]) { extras = [ pkgs.libffi.dev ]; };
+  lisp = newLispPackages.cclWithPackages (lp: with lp; [
+    cl-async
+  ]) {};
 in
-# lisp
 mkShell {
   buildInputs = [ lisp ];
 }

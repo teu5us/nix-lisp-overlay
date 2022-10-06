@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs ? import <nixpkgs> {} }:
 
 let
   callPackage = pkgs.callPackage;

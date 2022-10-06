@@ -1,4 +1,4 @@
-{ lib, stdenv, makeWrapper, compiler, runCommand, pkg-config, scope }:
+{ lib, stdenv, makeWrapper, compiler, runCommand, pkg-config, scope, confBuilders }:
 
 f:
 
@@ -15,18 +15,17 @@ stdenv.mkDerivation {
   buildInputs = [ compiler asdfHook ] ++ extras;
   src = null;
   phases = [ "buildPhase" "installPhase" ];
+      # --add-flags "--eval" --add-flags "'(asdf:initialize-source-registry #p\"${confBuilders.buildSourceRegistry lispInputs}\")'" \
+      # --add-flags "--eval" --add-flags "'(asdf:initialize-output-translations #p\"${confBuilders.buildOutputTranslations lispInputs}\")'"
+      # --prefix PATH : "$PATH" \
   buildPhase = ''
-    buildPathsForLisp "${toString lispInputs}" "${toString extras}"
+    buildPathsForLisp "${toString lispInputs}" "${toString extras}" ""
     makeWrapper ${compiler}/bin/${compiler.pname} ./${compiler.pname} \
-      --set "CL_SOURCE_REGISTRY" "$CL_SOURCE_REGISTRY" \
-      --set ASDF_OUTPUT_TRANSLATIONS "$ASDF_OUTPUT_TRANSLATIONS" \
+      --set XDG_CONFIG_DIRS "$XDG_CONFIG_DIRS" \
       --set LD_LIBRARY_PATH "$LD_LIBRARY_PATH" \
       --set CPATH "$CPATH" \
       --set PKG_CONFIG_PATH "$PKG_CONFIG_PATH" \
-      --set PATH "$PATH_FOR_LISP" \
-      --add-flags ${if lib.elem compiler.pname ["sbcl" "ccl"]
-                    then "--eval --add-flags \"'(require :asdf)'\""
-                    else "--load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\""}
+      --add-flags "--load" --add-flags "${asdf}/lib/common-lisp/asdf/build/asdf.lisp"
   '';
   installPhase = ''
     mkdir -p $out/bin

@@ -1,49 +1,54 @@
-{ pkgs, lib, stdenv, newScope, asdf, runCommand }:
+attrs@{ pkgs, lib, stdenv, newScope, asdf, runCommand }:
 
 let
-  list_NonRecursive = t:
-    with lib;
-    dir: mapAttrsToList (name: type: name)
-      (filterAttrs (name: type: type == t)
-        (builtins.readDir dir));
-
-  listDirsNonRecursive = dir:
-    map (name: dir + ("/" + name)) (list_NonRecursive "directory" dir);
-
-  listFilesNonRecursive = dir: list_NonRecursive "regular" dir;
-
-  filename = path: lib.last (lib.splitString "/" (toString path));
+  buildSrc = { pname, version, src ? null, release ? null, ... }:
+    assert src != null || release != null;
+    stdenv.mkDerivation {
+      inherit pname;
+      name = "${pname}-${version}_src";
+      src = if src == null
+            then let
+              data = releases.${release};
+            in
+              (pkgs.${data.fetcher}) data.src
+            else src;
+      phases = ["unpackPhase" "installPhase"];
+      installPhase = ''
+        mkdir -p $out/
+        cp -r ./. $out/
+      '';
+    };
 
   releases = builtins.fromJSON (builtins.readFile ./releases.json);
+
+  systems = builtins.fromJSON (builtins.readFile ./systems_merged.json);
 
   overrides = import ./overrides.nix { inherit pkgs lib; };
 
   scope = compiler: lib.customisation.makeScope newScope (self: with self;
-    let
-      buildLispPackage = (self.callPackage ./lisp-package-builder.nix
-        { inherit (self) compiler asdf resolveLispInputs;
-          inherit stdenv lib;
-        });
-    in
     {
-    inherit compiler asdf buildLispPackage;
+    inherit compiler;
+
+    asdf = attrs.asdf.overrideAttrs (oa: {
+      # patch taken from guix and modified to exclude unused variable warnings
+      buildPhase = oa.buildPhase + ''
+        patch -p1 -i ${./patches/cl-asdf-config-directories.patch} build/asdf.lisp
+      '';
+    });
+
+    buildLispPackage = (self.callPackage ./lisp-package-builder.nix
+      { inherit (self) compiler asdf;
+        inherit stdenv lib buildSrc confBuilders releases;
+        scope = self;
+      });
 
     uiop = asdf;
 
-    # cl2nix = callPackage ./packages/cl2nix {};
-    # ubiquitous = callPackage ./packages/ubiquitous {};
-    # alexandria = callPackage ./packages/alexandria {};
-    # trivial-features = callPackage ./packages/trivial-features {};
-    # trivial-gray-streams = callPackage ./packages/trivial-gray-streams {};
-    # babel = callPackage ./packages/babel {};
-    # cl-ppcre = callPackage ./packages/cl-ppcre {};
-    # cl-json = callPackage ./packages/cl-json {};
-    # cffi = callPackage ./packages/cffi {};
-    } // lib.mapAttrs (n: v: buildLispPackage v) releases);
+    } // lib.mapAttrs (n: v: if lib.isAttrs v then buildLispPackage v else self.${v}) systems);
 in rec {
   packagesFor = compiler:
     overrides (scope compiler);
 
   withPackages = compiler: pkgs.callPackage ./wrap-lisp.nix
-    { inherit compiler; scope = packagesFor compiler; };
+    { inherit compiler confBuilders; scope = packagesFor compiler; };
 }

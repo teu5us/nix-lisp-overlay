@@ -4,9 +4,52 @@ addToSearchPathWithCustomDelimiter_unsafe () {
     local delimiter="$1"
     local varName="$2"
     local dir="$3"
+    # local mapping="((\"$dir/\" :**/) (\"$dir/\" :**/))"
+    # if [[ -d "$dir" && "${!varName:+${delimiter}${!varName}${delimiter}}" \
+    #       != *"${delimiter}${dir}${delimiter}"* ]]; then
+    #     export "${varName}=${!varName:+${!varName}${delimiter}}${mapping}"
+    # fi
     if [[ -d "$dir" && "${!varName:+${delimiter}${!varName}${delimiter}}" \
           != *"${delimiter}${dir}${delimiter}"* ]]; then
         export "${varName}=${!varName:+${!varName}${delimiter}}${dir}${delimiter}${dir}"
+    fi
+}
+
+copyFilesPreservingDirs () {
+    local to="$1"
+    local files="$2"
+    for file in ${files[@]}; do
+        mkdir -p "$to"/"`dirname $file`"
+        cp -p -r "$file" "$to"/"$file"
+    done
+}
+
+outputLispConfigs () {
+    local lispInputs="$1"
+    declare -A lispPathsSeen=()
+    for system in $lispInputs; do
+        _outputLispConfigs $system
+    done
+}
+
+_outputLispConfigs ()  {
+    local system="$1"
+    if [ -v lispPathsSeen[$system] ]; then
+        return
+    else
+        lispPathsSeen[$system]=1
+        local lisp_path="$system"
+        if [ -d "$lisp_path" ]; then
+            echo "(:tree \"$lisp_path\")" > "$out/share/common-lisp/source-registry.conf.d/$(stripHash $lisp_path).conf"
+            echo "(\"$lisp_path\" t)" > "$out/share/common-lisp/asdf-output-translations.conf.d/$(stripHash $lisp_path).conf"
+            local prop="$system/nix-support/lisp-inputs"
+            if [ -e "$prop" ]; then
+                local new_system
+                for new_system in $(cat $prop); do
+                    _outputLispConfigs "$new_system"
+                done
+            fi
+        fi
     fi
 }
 
@@ -16,8 +59,6 @@ buildPathsForLisp () {
     local propagatedBuildInputs="$3"
     declare -A lispPathsSeen=()
     declare -A extPathsSeen=()
-    declare -A aotFrom=()
-    declare -A aotTo=()
     for system in $lispInputs; do
         _addToLispPath $system
     done
@@ -33,17 +74,18 @@ _addToLispPath ()  {
         return
     else
         lispPathsSeen[$system]=1
-        local lisp_path="$system/lib/common-lisp"
+        local lisp_path="$system"
         if [ -d "$lisp_path" ]; then
-            addToSearchPath "CL_SOURCE_REGISTRY" "$lisp_path//"
-            addToSearchPathWithCustomDelimiter_unsafe ":" "ASDF_OUTPUT_TRANSLATIONS" "$lisp_path/"
-            local prop="$system/nix-support/lisp-inputs"
-            if [ -e "$prop" ]; then
-                local new_system
-                for new_system in $(cat $prop); do
-                    _addToLispPath "$new_system"
-                done
-            fi
+            addToSearchPath "XDG_CONFIG_DIRS" "$lisp_path/share"
+            # addToSearchPath "CL_SOURCE_REGISTRY" "$lisp_path//"
+            # addToSearchPathWithCustomDelimiter_unsafe ":" "ASDF_OUTPUT_TRANSLATIONS" "$lisp_path/"
+            # local prop="$system/nix-support/lisp-inputs"
+            # if [ -e "$prop" ]; then
+            #     local new_system
+            #     for new_system in $(cat $prop); do
+            #         _addToLispPath "$new_system"
+            #     done
+            # fi
         fi
     fi
 }
@@ -58,13 +100,22 @@ _addToExternalPath () {
         local lib_path="$package/lib"
         local inc_path="$package/include"
         if [ -d "$lib_path" ]; then
-            addToSearchPath "LD_LIBRARY_PATH" "$lib_path"
+            if [ ! -d "$lib_path/common-lisp" ]; then
+                addToSearchPath "LD_LIBRARY_PATH" "$lib_path"
+            fi
         fi
         if [ -d "$bin_path" ]; then
-            addToSearchPath "PATH_FOR_LISP" "$bin_path"
+            addToSearchPath "PATH" "$bin_path"
         fi
         if [ -d "$inc_path" ]; then
             addToSearchPath "CPATH" "$inc_path"
+        fi
+        local lisp="$system/nix-support/lisp-inputs"
+        if [ -e "$lisp" ]; then
+            local new_system
+            for new_system in $(cat $lisp); do
+                _addToExternalPath "$new_system"
+            done
         fi
         local prop="$package/nix-support/propagated-build-inputs"
         if [ -e "$prop" ]; then
