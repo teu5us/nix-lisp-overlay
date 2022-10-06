@@ -38,7 +38,7 @@ let
 
     buildLispPackage = (self.callPackage ./lisp-package-builder.nix
       { inherit (self) compiler asdf;
-        inherit stdenv lib buildSrc confBuilders releases;
+        inherit stdenv lib buildSrc releases;
         scope = self;
       });
 

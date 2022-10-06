@@ -1,4 +1,4 @@
-{ lib, stdenv, makeWrapper, compiler, runCommand, pkg-config, scope, confBuilders }:
+{ lib, stdenv, makeWrapper, compiler, runCommand, pkg-config, scope }:
 
 f:
 
@@ -15,8 +15,6 @@ stdenv.mkDerivation {
   buildInputs = [ compiler asdfHook ] ++ extras;
   src = null;
   phases = [ "buildPhase" "installPhase" ];
-      # --add-flags "--eval" --add-flags "'(asdf:initialize-source-registry #p\"${confBuilders.buildSourceRegistry lispInputs}\")'" \
-      # --add-flags "--eval" --add-flags "'(asdf:initialize-output-translations #p\"${confBuilders.buildOutputTranslations lispInputs}\")'"
       # --prefix PATH : "$PATH" \
   buildPhase = ''
     buildPathsForLisp "${toString lispInputs}" "${toString extras}" ""

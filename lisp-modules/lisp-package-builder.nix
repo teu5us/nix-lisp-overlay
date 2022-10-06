@@ -6,7 +6,6 @@
 , asdf
 , runCommand
 , buildSrc
-, confBuilders
 , releases
 , setJavaClassPath }:
 
