@@ -19,10 +19,10 @@ stdenv.mkDerivation {
   buildPhase = ''
     buildPathsForLisp "${toString lispInputs}" "${toString extras}" ""
     makeWrapper ${compiler}/bin/${compiler.pname} ./${compiler.pname} \
-      --set XDG_CONFIG_DIRS "$XDG_CONFIG_DIRS" \
-      --set LD_LIBRARY_PATH "$LD_LIBRARY_PATH" \
-      --set CPATH "$CPATH" \
-      --set PKG_CONFIG_PATH "$PKG_CONFIG_PATH" \
+      --prefix XDG_CONFIG_DIRS : "$XDG_CONFIG_DIRS" \
+      --prefix LD_LIBRARY_PATH : "$LD_LIBRARY_PATH" \
+      --prefix CPATH : "$CPATH" \
+      --prefix PKG_CONFIG_PATH : "$PKG_CONFIG_PATH" \
       --add-flags "--load" --add-flags "${asdf}/lib/common-lisp/asdf/build/asdf.lisp"
   '';
   installPhase = ''
