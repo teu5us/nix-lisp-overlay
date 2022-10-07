@@ -22,7 +22,7 @@ copyFilesPreservingDirs () {
         local filedir=`dirname $file`
         local implFiles=`locateImplementationFilesInDir "$filedir"`
         mkdir -p "$to"/"$filedir"
-        cp -p -r "$file" "$to"/"$file"
+        [[ -f "$file" || -d "$file" ]] && cp -p -r "$file" "$to"/"$file"
         for f in ${implFiles[@]}; do
             cp -p -r "$f" "$to"/"$f"
         done
