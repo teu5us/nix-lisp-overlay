@@ -95,9 +95,7 @@ stdenv.mkDerivation (final: {
     ## write all dependencies as configs,
     ## so we don't clutter CL_SOURCE_REGISTRY and ASDF_OUTPUT_TRANSLATIONS
     mkdir -p $out/share/common-lisp/{source-registry.conf.d,asdf-output-translations.conf.d}
-    echo "(:tree \"$out\")" > $out/share/common-lisp/source-registry.conf.d/$(stripHash $out).conf
-    echo "(\"$out\" t)" > $out/share/common-lisp/asdf-output-translations.conf.d/$(stripHash $out).conf
-    outputLispConfigs "${toString final.lispInputs}"
+    outputLispConfigs "$out ${toString final.lispInputs}"
 
     ## remove unneeded files
     rm -rf $out/.cache
