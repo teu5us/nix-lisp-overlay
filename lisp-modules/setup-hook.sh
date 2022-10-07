@@ -19,9 +19,51 @@ copyFilesPreservingDirs () {
     local to="$1"
     local files="$2"
     for file in ${files[@]}; do
-        mkdir -p "$to"/"`dirname $file`"
+        local filedir=`dirname $file`
+        local implFiles=`locateImplementationFilesInDir "$filedir"`
+        mkdir -p "$to"/"$filedir"
         cp -p -r "$file" "$to"/"$file"
+        for f in ${implFiles[@]}; do
+            cp -p -r "$f" "$to"/"$f"
+        done
     done
+}
+
+locateImplementationFilesInDir () {
+    local dir="$1"
+    declare -a implementationList=(abcl \
+                                       acl \
+                                       allegro \
+                                       ccl \
+                                       clasp \
+                                       clisp \
+                                       clozure \
+                                       cmu \
+                                       cmucl \
+                                       corman \
+                                       cormanlisp \
+                                       ecl \
+                                       gcl \
+                                       genera \
+                                       mezzano \
+                                       lispworks \
+                                       lispworks-personal-edition \
+                                       lw \
+                                       lwpe \
+                                       mcl \
+                                       mkcl \
+                                       openmcl \
+                                       sbcl \
+                                       scl \
+                                       smbx \
+                                       symbolics \
+                                       xcl )
+    declare -a implementationFiles=()
+    for impl in ${implementationList[@]}; do
+        local file=`find "$dir" -maxdepth 1 -name "*$impl*"`
+        [ -f "$file" ] && implementationFiles+=("$file")
+    done
+    echo ${implementationFiles[@]}
 }
 
 outputLispConfigs () {
