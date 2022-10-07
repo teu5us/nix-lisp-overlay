@@ -51,7 +51,7 @@ stdenv.mkDerivation (final: {
     mkdir -p "$output"
 
     ## see ./setup-hook.sh
-    copyFilesPreservingDirs "$output" "${toString final.systemFiles} ${toString final.extraFiles}"
+    copyFilesPreservingDirs "$output" "${toString final.systemFiles} version.sexp ${toString final.extraFiles}"
     #cp -r ./. $out/lib/common-lisp/${pname}
 
     ## see ./setup-hook.sh
