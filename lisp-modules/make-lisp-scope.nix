@@ -27,7 +27,7 @@ let
 
   scope = compiler: lib.customisation.makeScope newScope (self: with self;
     {
-    inherit compiler;
+    inherit compiler buildSrc;
 
     asdf = attrs.asdf.overrideAttrs (oa: {
       # patch taken from guix and modified to exclude unused variable warnings

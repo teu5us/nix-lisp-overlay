@@ -60,8 +60,10 @@ locateImplementationFilesInDir () {
                                        xcl )
     declare -a implementationFiles=()
     for impl in ${implementationList[@]}; do
-        local file=`find "$dir" -maxdepth 1 -name "*$impl*"`
-        [ -f "$file" ] && implementationFiles+=("$file")
+        if [ -d "$dir" ]; then
+            local file=`find "$dir" -maxdepth 1 -name "*$impl*"`
+            [ -f "$file" ] && implementationFiles+=("$file")
+        fi
     done
     echo ${implementationFiles[@]}
 }
