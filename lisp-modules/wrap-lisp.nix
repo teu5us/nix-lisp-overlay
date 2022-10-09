@@ -6,7 +6,7 @@ f:
 
 let
   asdf = scope.asdf;
-  lispInputs = f scope;
+  lispInputs = map (input: if lib.isString input then scope.${input} else input) (f scope);
   asdfHook = import ./setup-hook.nix runCommand;
 in
 stdenv.mkDerivation {
