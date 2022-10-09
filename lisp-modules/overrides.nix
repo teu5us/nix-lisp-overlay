@@ -13,18 +13,78 @@ scope.overrideScope' (self: super: rec {
     '';
   });
 
-  commondoc-markdown-docs = super.commondoc-markdown-docs.overrideAttrs (oa: {
-    lispInputs = oa.lispInputs ++ [ self.commondoc-markdown ];
+  cl-cffi-gtk-cairo = super.cl-cffi-gtk-cairo.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.cairo ];
+  });
+
+  cl-cffi-gtk-gdk = super.cl-cffi-gtk-gdk.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gtk3 ];
+  });
+
+  cl-cffi-gtk-gdk-pixbuf = super.cl-cffi-gtk-gdk-pixbuf.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gdk-pixbuf ];
+  });
+
+  cl-cffi-gtk-glib = super.cl-cffi-gtk-glib.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.glib.out ];
+  });
+
+  cl-cffi-gtk-pango = super.cl-cffi-gtk-pango.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gnome2.pango.out ];
   });
 
   cl-containers = super.cl-containers.overrideAttrs (oa: {
     lispInputs = oa.lispInputs ++ (with self; [ asdf-system-connections ]);
   });
 
+  cl-gobject-introspection = super.cl-gobject-introspection.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [
+      pkgs.glib.out
+      pkgs.gobject-introspection
+    ];
+  });
+
+  cl-gopher = super.cl-gopher.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
+  });
+
+  cl-libuv = super.cl-libuv.overrideAttrs (oa: {
+    lispInputs = oa.lispInputs ++ [ self.cffi-grovel ];
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libuv ];
+  });
+
+  cl_plus_ssl_merged = super.cl_plus_ssl_merged.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
+  });
+
+  cl-tld = super.cl-tld.overrideAttrs (oa: {
+    extraFiles = [ "effective_tld_names.dat" ];
+  });
+
+  cl-unicode = super.cl-unicode.overrideAttrs (oa: {
+    lispInputs = oa.lispInputs ++ [ super.flexi-streams ];
+    extraFiles = [ "build" "test" ];
+  });
+
+  cl-webkit2 = super.cl-webkit2.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ (with pkgs; [
+      glib.out gdk-pixbuf cairo gnome2.pango.out gtk3 webkitgtk_4_1
+    ]);
+  });
+
+  commondoc-markdown-docs = super.commondoc-markdown-docs.overrideAttrs (oa: {
+    lispInputs = oa.lispInputs ++ [ self.commondoc-markdown ];
+  });
+
+  iolib_merged = super.iolib_merged.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libfixposix ];
+  });
+
   nfiles = super.nfiles.overrideAttrs (oa: {
     lispInputs = oa.lispInputs ++ [ self.iolib_slash_os ];
   });
 
+  ## Nyxt Browser
   nyxt-gtk = super.nyxt_slash_gtk-application.overrideAttrs (oa: rec {
     pname = "nyxt-gtk";
 
@@ -86,50 +146,8 @@ scope.overrideScope' (self: super: rec {
     '';
   });
 
-  cl-webkit2 = super.cl-webkit2.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ (with pkgs; [
-      glib.out gdk-pixbuf cairo gnome2.pango.out gtk3 webkitgtk_4_1
-    ]);
-  });
-
-  cl-gobject-introspection = super.cl-gobject-introspection.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [
-      pkgs.glib.out
-      pkgs.gobject-introspection
-    ];
-  });
-
-  cl-cffi-gtk-glib = super.cl-cffi-gtk-glib.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.glib.out ];
-  });
-
-  cl-cffi-gtk-cairo = super.cl-cffi-gtk-cairo.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.cairo ];
-  });
-
-  cl-cffi-gtk-gdk-pixbuf = super.cl-cffi-gtk-gdk-pixbuf.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gdk-pixbuf ];
-  });
-
-  cl-cffi-gtk-pango = super.cl-cffi-gtk-pango.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gnome2.pango.out ];
-  });
-
-  cl-cffi-gtk-gdk = super.cl-cffi-gtk-gdk.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gtk3 ];
-  });
-
-  cl-libuv = super.cl-libuv.overrideAttrs (oa: {
-    lispInputs = oa.lispInputs ++ [ self.cffi-grovel ];
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libuv ];
-  });
-
-  cl_plus_ssl_merged = super.cl_plus_ssl_merged.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
-  });
-
-  cl-gopher = super.cl-gopher.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
+  quri = super.quri.overrideAttrs (oa: {
+    extraFiles = [ "data" ];
   });
 
   swank = super.swank.overrideAttrs (oa: {
@@ -148,23 +166,6 @@ scope.overrideScope' (self: super: rec {
 
   slynk = super.slynk.overrideAttrs (oa: {
     extraFiles = [ "slynk" ];
-  });
-
-  cl-unicode = super.cl-unicode.overrideAttrs (oa: {
-    lispInputs = oa.lispInputs ++ [ super.flexi-streams ];
-    extraFiles = [ "build" "test" ];
-  });
-
-  quri = super.quri.overrideAttrs (oa: {
-    extraFiles = [ "data" ];
-  });
-
-  cl-tld = super.cl-tld.overrideAttrs (oa: {
-    extraFiles = [ "effective_tld_names.dat" ];
-  });
-
-  iolib_merged = super.iolib_merged.overrideAttrs (oa: {
-    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libfixposix ];
   });
 
   trivial-mimes = super.trivial-mimes.overrideAttrs (oa: {
