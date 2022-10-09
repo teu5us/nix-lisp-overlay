@@ -56,12 +56,13 @@ let builder =
             buildPathsForLisp "${toString final.lispInputs}" \
               "${toString final.buildInputs}" \
               "${toString final.propagatedBuildInputs}"
-            export CL_SOURCE_REGISTRY="$CL_SOURCE_REGISTRY:$out//"
-            export ASDF_OUTPUT_TRANSLATIONS="$ASDF_OUTPUT_TRANSLATIONS:$out/:$out/"
+            export CL_SOURCE_REGISTRY="$out//:$CL_SOURCE_REGISTRY"
+            export ASDF_OUTPUT_TRANSLATIONS="$out/:$out/:$ASDF_OUTPUT_TRANSLATIONS"
             export HOME=$out
           '';
           # ${if lib.elem compiler.pname ["sbcl" "ccl"] #   then "(require :asdf)" #   else "(load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\")"}
           buildPhase = with builtins; ''
+            runHook preBuild
             ### build in $out, so that lisps don't try to recompile dependencies
             ### see ASDF_OUTPUT_TRANSLATIONS
             output="$out/lib/common-lisp/${final.pname}"
@@ -94,9 +95,11 @@ let builder =
                   (uiop:delete-directory-tree #p"$out/" :validate t)
                   (uiop:quit 1)))
             EOF
+            runHook postBuild
           '';
 
           installPhase = with builtins; ''
+            runHook preInstall
             ### propagate lisp dependencies
             ## list immediate dependencies
             mkdir -p $out/nix-support
@@ -111,6 +114,7 @@ let builder =
 
             ## remove unneeded files
             rm -rf $out/.cache
+            runHook postInstall
           '';
 
           dontStrip = true;

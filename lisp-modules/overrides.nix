@@ -4,24 +4,28 @@ scope:
 
 scope.overrideScope' (self: super: rec {
 
+  "40ants-doc-full" = super."40ants-doc-full".overrideAttrs (oa: {
+    extraFiles = [ "40ants-doc.asd" ];
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
+    postInstall = ''
+      rm $out/share/common-lisp/source-registry.conf.d/$(stripHash ${self."40ants-doc"}).conf
+      rm $out/share/common-lisp/asdf-output-translations.conf.d/$(stripHash ${self."40ants-doc"}).conf
+    '';
+  });
+
+  commondoc-markdown-docs = super.commondoc-markdown-docs.overrideAttrs (oa: {
+    lispInputs = oa.lispInputs ++ [ self.commondoc-markdown ];
+  });
+
   cl-containers = super.cl-containers.overrideAttrs (oa: {
     lispInputs = oa.lispInputs ++ (with self; [ asdf-system-connections ]);
-    extraFiles = [ "dev/." ];
   });
 
   nfiles = super.nfiles.overrideAttrs (oa: {
     lispInputs = oa.lispInputs ++ [ self.iolib_slash_os ];
   });
 
-  introspect-environment = super.introspect-environment.overrideAttrs (oa: {
-    extraFiles = [ "default.lisp" ];
-  });
-
-  static-vectors = super.static-vectors.overrideAttrs (oa: {
-    extraFiles = [ "src/ffi-types.lisp" ];
-  });
-
-  nyxt_gtk = super.nyxt_slash_gtk-application.overrideAttrs (oa: rec {
+  nyxt-gtk = super.nyxt_slash_gtk-application.overrideAttrs (oa: rec {
     pname = "nyxt-gtk";
 
     providedSystems = [ "nyxt/gtk-application" ];
@@ -30,7 +34,8 @@ scope.overrideScope' (self: super: rec {
     application = "nyxt/gtk-application";
 
     extraCompilerArgs = if oa.compiler.pname == "sbcl"
-                        then [ "--dynamic-space-size" "$(sbcl --noinform --no-userinit --non-interactive --eval '(prin1 (max 3072 (/ (sb-ext:dynamic-space-size) 1024 1024)))' --quit | tail -1)" ]
+                        then [ "--dynamic-space-size"
+                               "$(sbcl --noinform --no-userinit --non-interactive --eval '(prin1 (max 3072 (/ (sb-ext:dynamic-space-size) 1024 1024)))' --quit | tail -1)" ]
                         else [];
 
     nativeBuildInputs = oa.nativeBuildInputs ++ (with pkgs; [
@@ -39,7 +44,9 @@ scope.overrideScope' (self: super: rec {
 
     lispInputs = (lib.remove self.cl-containers oa.lispInputs) ++ [
       self.alexandria
-      self.cl-gobject-introspection self.mk-string-metrics self.osicat
+      self.cl-gobject-introspection
+      self.mk-string-metrics
+      self.osicat
       (cl-containers.override { preLoad = with self; [
                                   moptilities metatilities-base
                                 ]; })
@@ -54,7 +61,6 @@ scope.overrideScope' (self: super: rec {
     ];
 
     buildInputs = oa.buildInputs ++ (with pkgs; [
-      # glib gdk-pixbuf cairo pango gtk3
       mailcap glib-networking gsettings-desktop-schemas xclip notify-osd enchant
     ]) ++ gstBuildInputs;
 
@@ -69,7 +75,6 @@ scope.overrideScope' (self: super: rec {
         cp -f $src/assets/nyxt_''${i}x''${i}.png "$out/share/icons/hicolor/''${i}x''${i}/apps/nyxt.png"
       done
 
-      echo LD_LIBRARY_PATH $LD_LIBRARY_PATH
       mkdir -p $out/bin && makeWrapper $output/nyxt $out/bin/nyxt \
         --set LD_LIBRARY_PATH "$LD_LIBRARY_PATH" \
         --prefix GST_PLUGIN_SYSTEM_PATH_1_0 : "${GST_PLUGIN_SYSTEM_PATH_1_0}" \
@@ -79,10 +84,6 @@ scope.overrideScope' (self: super: rec {
     checkPhase = ''
       $out/bin/nyxt -h
     '';
-  });
-
-  lparallel = super.lparallel.overrideAttrs (oa: {
-    extraFiles = [ "src/." ];
   });
 
   cl-webkit2 = super.cl-webkit2.overrideAttrs (oa: {
@@ -131,10 +132,6 @@ scope.overrideScope' (self: super: rec {
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
   });
 
-  cl-async = super.cl-async.overrideAttrs (oa: {
-    providedSystems = [ "cl-async" ];
-  });
-
   swank = super.swank.overrideAttrs (oa: {
     extraFiles = [
       "swank" "contrib" "lib"
@@ -149,11 +146,12 @@ scope.overrideScope' (self: super: rec {
     ];
   });
 
+  slynk = super.slynk.overrideAttrs (oa: {
+    extraFiles = [ "slynk" ];
+  });
+
   cl-unicode = super.cl-unicode.overrideAttrs (oa: {
     lispInputs = oa.lispInputs ++ [ super.flexi-streams ];
-    systemFiles = lib.filter (f: ! lib.elem f [
-      "lists.lisp" "hash-tables.lisp" "methods.lisp"
-    ]) oa.systemFiles;
     extraFiles = [ "build" "test" ];
   });
 
@@ -169,17 +167,8 @@ scope.overrideScope' (self: super: rec {
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libfixposix ];
   });
 
-  # lisp-namespace = super.lisp-namespace.overrideAttrs (oa: {
-  #   extraFiles = [ "namespace.lisp" ];
-  # });
-
   trivial-mimes = super.trivial-mimes.overrideAttrs (oa: {
     extraFiles = [ "mime.types" ];
   });
-
-  trivial-with-current-source-form =
-    super.trivial-with-current-source-form.overrideAttrs (oa: {
-      extraFiles = [ "version-string.sexp" ];
-    });
 
 })
