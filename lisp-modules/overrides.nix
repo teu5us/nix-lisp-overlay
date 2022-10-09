@@ -13,13 +13,21 @@ scope.overrideScope' (self: super: rec {
     lispInputs = oa.lispInputs ++ [ self.iolib_slash_os ];
   });
 
+  introspect-environment = super.introspect-environment.overrideAttrs (oa: {
+    extraFiles = [ "default.lisp" ];
+  });
+
+  static-vectors = super.static-vectors.overrideAttrs (oa: {
+    extraFiles = [ "src/ffi-types.lisp" ];
+  });
+
   nyxt_gtk = super.nyxt_slash_gtk-application.overrideAttrs (oa: rec {
     pname = "nyxt-gtk";
 
-    providedSystems = [ "nyxt/gi-gtk-application" ];
+    providedSystems = [ "nyxt/gtk-application" ];
     systemFiles = [ "nyxt.asd" "source/." "libraries/." ];
 
-    application = "nyxt/gi-gtk-application";
+    application = "nyxt/gtk-application";
 
     extraCompilerArgs = if oa.compiler.pname == "sbcl"
                         then [ "--dynamic-space-size" "$(sbcl --noinform --no-userinit --non-interactive --eval '(prin1 (max 3072 (/ (sb-ext:dynamic-space-size) 1024 1024)))' --quit | tail -1)" ]
