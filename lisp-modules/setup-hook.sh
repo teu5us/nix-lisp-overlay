@@ -19,54 +19,60 @@ copyFilesPreservingDirs () {
     local to="$1"
     local files="$2"
     for file in ${files[@]}; do
-        local filedir=`dirname $file`
-        local implFiles=`locateImplementationFilesInDir "$filedir"`
-        mkdir -p "$to"/"$filedir"
-        [[ -f "$file" || -d "$file" ]] && cp -p -r "$file" "$to"/"$file"
+        # local implFiles=`locateImplementationFilesInDir "$filedir"`
+        if [ -f "$file" ]; then
+            local filedir=`dirname $file`
+            mkdir -p "$to"/"$filedir"
+            cp -p "$file" "$to"/"$file"
+        fi
+        if [ -d "$file" ]; then
+            mkdir -p "$to"/"$file"
+            cp -p -r "$file/." "$to"/"$file"
+        fi
         for f in ${implFiles[@]}; do
             cp -p -r "$f" "$to"/"$f"
         done
     done
 }
 
-locateImplementationFilesInDir () {
-    local dir="$1"
-    declare -a implementationList=(abcl \
-                                       acl \
-                                       allegro \
-                                       ccl \
-                                       clasp \
-                                       clisp \
-                                       clozure \
-                                       cmu \
-                                       cmucl \
-                                       corman \
-                                       cormanlisp \
-                                       ecl \
-                                       gcl \
-                                       genera \
-                                       mezzano \
-                                       lispworks \
-                                       lispworks-personal-edition \
-                                       lw \
-                                       lwpe \
-                                       mcl \
-                                       mkcl \
-                                       openmcl \
-                                       sbcl \
-                                       scl \
-                                       smbx \
-                                       symbolics \
-                                       xcl )
-    declare -a implementationFiles=()
-    for impl in ${implementationList[@]}; do
-        if [ -d "$dir" ]; then
-            local file=`find "$dir" -maxdepth 1 -name "*$impl*"`
-            [ -f "$file" ] && implementationFiles+=("$file")
-        fi
-    done
-    echo ${implementationFiles[@]}
-}
+# locateImplementationFilesInDir () {
+#     local dir="$1"
+#     declare -a implementationList=(abcl \
+#                                        acl \
+#                                        allegro \
+#                                        ccl \
+#                                        clasp \
+#                                        clisp \
+#                                        clozure \
+#                                        cmu \
+#                                        cmucl \
+#                                        corman \
+#                                        cormanlisp \
+#                                        ecl \
+#                                        gcl \
+#                                        genera \
+#                                        mezzano \
+#                                        lispworks \
+#                                        lispworks-personal-edition \
+#                                        lw \
+#                                        lwpe \
+#                                        mcl \
+#                                        mkcl \
+#                                        openmcl \
+#                                        sbcl \
+#                                        scl \
+#                                        smbx \
+#                                        symbolics \
+#                                        xcl )
+#     declare -a implementationFiles=()
+#     for impl in ${implementationList[@]}; do
+#         if [ -d "$dir" ]; then
+#             local file=`find "$dir" -maxdepth 1 -name "*$impl*"`
+#             [ -f "$file" ] && implementationFiles+=("$file")
+#         fi
+#     done
+#     echo ${implementationFiles[@]}
+# }
 
 outputLispConfigs () {
     local lispInputs="$1"
