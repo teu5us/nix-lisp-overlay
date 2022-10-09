@@ -40,9 +40,9 @@ scope.overrideScope' (self: super: rec {
     lispInputs = (lib.remove self.cl-containers oa.lispInputs) ++ [
       self.alexandria
       self.cl-gobject-introspection self.mk-string-metrics self.osicat
-      (cl-containers.overrideAttrs (oa: { preLoad = with self; [
-                                            moptilities metatilities-base
-                                          ]; }))
+      (cl-containers.override { preLoad = with self; [
+                                  moptilities metatilities-base
+                                ]; })
     ];
 
     gstBuildInputs = with pkgs.gst_all_1; [
