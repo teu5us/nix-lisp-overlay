@@ -1,8 +1,3 @@
 { pkgs ? import <nixpkgs> {} }:
 
-let
-  callPackage = pkgs.callPackage;
-in
-{
-  newLispPackages = callPackage ./lisp-modules {};
-}
+pkgs.callPackage ./lisp-modules {}
