@@ -3,7 +3,7 @@
 with pkgs // (import ./. { inherit pkgs; });
 
 let
-  lisp = newLispPackages.cclWithPackages (lp: with lp; [
+  lisp = eclWithPackages (lp: with lp; [
     cl-async
   ]) {};
 in
