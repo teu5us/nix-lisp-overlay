@@ -13,6 +13,10 @@ scope.overrideScope' (self: super: rec {
     '';
   });
 
+  cl-async-ssl = super.cl-async-ssl.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libuv pkgs.openssl.out ];
+  });
+
   cl-cffi-gtk-cairo = super.cl-cffi-gtk-cairo.overrideAttrs (oa: {
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.cairo ];
   });
