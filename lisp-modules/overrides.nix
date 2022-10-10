@@ -10,6 +10,10 @@ let
 in
 scope.overrideScope' (self: super: rec {
 
+  "2d-array" = super."2d-array".overrideAttrs (oa: {
+    extraFiles = "version.lisp";
+  });
+
   "40ants-doc-full" = super."40ants-doc-full".overrideAttrs (oa: {
     extraFiles = [ "40ants-doc.asd" ];
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openssl.out ];
@@ -65,6 +69,12 @@ scope.overrideScope' (self: super: rec {
     lispInputs = oa.lispInputs ++ (with self; [ asdf-system-connections ]);
   });
 
+  cl-cuda = super.cl-cuda.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [
+      # TODO: libcuda.so
+    ];
+  });
+
   cl-gobject-introspection = super.cl-gobject-introspection.overrideAttrs (oa: {
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [
       pkgs.glib.out
@@ -111,6 +121,10 @@ scope.overrideScope' (self: super: rec {
 
   iolib_merged = super.iolib_merged.overrideAttrs (oa: {
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libfixposix ];
+  });
+
+  lla = super.lla.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.openblas ];
   });
 
   nfiles = super.nfiles.overrideAttrs (oa: {
@@ -177,6 +191,11 @@ scope.overrideScope' (self: super: rec {
     checkPhase = ''
       $out/bin/nyxt -h
     '';
+  });
+
+  pzmq = super.pzmq.overrideAttrs (oa: {
+    lispInputs = oa.lispInputs ++ [ self.cffi-grovel ];
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.zeromq ];
   });
 
   quri = super.quri.overrideAttrs (oa: {
