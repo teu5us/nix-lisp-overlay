@@ -13,4 +13,6 @@ rec {
   sbclWithPackages = withPackages pkgs.sbcl;
   cclWithPackages = withPackages pkgs.ccl;
   eclWithPackages = withPackages pkgs.ecl;
+
+  nyxt-gtk = sbclPackages.nyxt-gtk;
 }
