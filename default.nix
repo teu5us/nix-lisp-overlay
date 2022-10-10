@@ -1,3 +1,3 @@
 { pkgs ? import <nixpkgs> {} }:
 
-pkgs.callPackage ./lisp-modules {}
+import ./lisp-modules { inherit pkgs; }
