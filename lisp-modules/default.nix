@@ -8,7 +8,9 @@ rec {
 
   sbclPackages = packagesFor pkgs.sbcl;
   cclPackages = packagesFor pkgs.ccl;
+  eclPackages = packagesFor pkgs.ecl;
 
   sbclWithPackages = withPackages pkgs.sbcl;
   cclWithPackages = withPackages pkgs.ccl;
+  eclWithPackages = withPackages pkgs.ecl;
 }
