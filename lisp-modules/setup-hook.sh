@@ -160,7 +160,7 @@ _addToExternalPath () {
         if [ -d "$inc_path" ]; then
             addToSearchPath "CPATH" "$inc_path"
         fi
-        local lisp="$system/nix-support/lisp-inputs"
+        local lisp="$package/nix-support/lisp-inputs"
         if [ -e "$lisp" ]; then
             local new_system
             for new_system in $(cat $lisp); do
