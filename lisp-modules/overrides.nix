@@ -2,6 +2,12 @@
 
 scope:
 
+let
+  hdf5_1_10_5 = pkgs.callPackage ./non-lisp/hdf5/hdf5-1.10.5.nix {
+    fortranSupport = false;
+    fortran = pkgs.gfortran;
+  };
+in
 scope.overrideScope' (self: super: rec {
 
   "40ants-doc-full" = super."40ants-doc-full".overrideAttrs (oa: {
@@ -11,6 +17,24 @@ scope.overrideScope' (self: super: rec {
       rm $out/share/common-lisp/source-registry.conf.d/$(stripHash ${self."40ants-doc"}).conf
       rm $out/share/common-lisp/asdf-output-translations.conf.d/$(stripHash ${self."40ants-doc"}).conf
     '';
+  });
+
+  cffi-libffi = super.cffi-libffi.overrideAttrs (oa: {
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [
+      pkgs.libffi_3_3.out pkgs.libffi_3_3.dev
+    ];
+  });
+
+  cl-ana_dot_hdf-cffi = super.cl-ana_dot_hdf-cffi.overrideAttrs (oa:
+  {
+    buildInputs = oa.buildInputs ++ [ pkgs.pkg-config ];
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ hdf5_1_10_5 hdf5_1_10_5.dev ];
+  });
+
+  cl-ana_dot_hdf-table = super.cl-ana_dot_hdf-table.overrideAttrs (oa:
+  {
+    buildInputs = oa.buildInputs ++ [ pkgs.pkg-config ];
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ hdf5_1_10_5 hdf5_1_10_5.dev ];
   });
 
   cl-async-ssl = super.cl-async-ssl.overrideAttrs (oa: {
@@ -79,6 +103,11 @@ scope.overrideScope' (self: super: rec {
   commondoc-markdown-docs = super.commondoc-markdown-docs.overrideAttrs (oa: {
     lispInputs = oa.lispInputs ++ [ self.commondoc-markdown ];
   });
+
+  gsll = super.gsll.overrideAttrs (oa: {
+    lispInputs = oa.lispInputs ++ [ cffi-libffi ];
+    propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.gsl ];
+});
 
   iolib_merged = super.iolib_merged.overrideAttrs (oa: {
     propagatedBuildInputs = oa.propagatedBuildInputs ++ [ pkgs.libfixposix ];
