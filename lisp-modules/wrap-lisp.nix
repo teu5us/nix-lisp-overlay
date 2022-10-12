@@ -1,25 +1,24 @@
 { lib, stdenv, makeWrapper, compiler, runCommand, pkg-config, scope }:
 
-f:
-
-{ extras ? [] }:
+packages:
 
 let
   asdf = scope.asdf;
-  lispInputs = map (input: if lib.isString input then scope.${input} else input) (f scope);
+  lispInputs = map
+    (input: if lib.isString input then scope.${input} else input)
+    (packages scope);
   asdfHook = import ./setup-hook.nix runCommand;
 in
 stdenv.mkDerivation {
+  inherit lispInputs;
   name = "${compiler.name}-with-packages";
   nativeBuildInputs = [ makeWrapper pkg-config ];
-  buildInputs = [ compiler asdfHook ] ++ extras;
+  buildInputs = [ compiler asdfHook ];
   src = null;
   phases = [ "buildPhase" "installPhase" ];
-      # --prefix PATH : "$PATH" \
   buildPhase = ''
-    buildPathsForLisp "${toString lispInputs}" "${toString extras}" ""
     makeWrapper ${compiler}/bin/${compiler.pname} ./${compiler.pname} \
-      --prefix XDG_CONFIG_DIRS : "$XDG_CONFIG_DIRS" \
+      --prefix XDG_CONFIG_DIRS : "$out/share" \
       --prefix LD_LIBRARY_PATH : "$LD_LIBRARY_PATH" \
       --prefix CPATH : "$CPATH" \
       --prefix PKG_CONFIG_PATH : "$PKG_CONFIG_PATH" \
@@ -27,6 +26,9 @@ stdenv.mkDerivation {
   '';
   installPhase = ''
     mkdir -p $out/bin
+    mkdir -p $out/share/common-lisp/source-registry.conf.d
+    mkdir -p $out/share/common-lisp/asdf-output-translations.conf.d
+    outputLispConfigs
     cp ${compiler.pname} $out/bin
   '';
 }

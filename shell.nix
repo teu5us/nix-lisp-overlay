@@ -3,10 +3,11 @@
 with pkgs // (import ./. { inherit pkgs; });
 
 let
-  lisp = eclWithPackages (lp: with lp; [
+  lisp = sbclWithPackages (lp: with lp; [
     cl-async
-  ]) {};
+    pkgs.gsl
+  ]);
 in
-mkShell {
-  buildInputs = [ lisp ];
-}
+  mkShell {
+    buildInputs = [ lisp ];
+  }

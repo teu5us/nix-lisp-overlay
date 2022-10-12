@@ -50,30 +50,26 @@ let builder =
                         ++ [ compiler asdfHook ]
                         ++ (lib.optional (compiler.pname == "abcl") setJavaClassPath);
 
-          configurePhase = ''
-            ## see ./setup-hook.sh
-            ## here we set XDG_CONFIG_DIRS, LD_LIBRARY_PATH, CPATH and PATH
-            buildPathsForLisp "${toString final.lispInputs}" \
-              "${toString final.buildInputs}" \
-              "${toString final.propagatedBuildInputs}"
-            export CL_SOURCE_REGISTRY="$out//:$CL_SOURCE_REGISTRY"
-            export ASDF_OUTPUT_TRANSLATIONS="$out/:$out/:$ASDF_OUTPUT_TRANSLATIONS"
-            export HOME=$out
-          '';
-          # ${if lib.elem compiler.pname ["sbcl" "ccl"] #   then "(require :asdf)" #   else "(load \"${asdf}/lib/common-lisp/asdf/build/asdf.lisp\")"}
           buildPhase = with builtins; ''
             runHook preBuild
+
             ### build in $out, so that lisps don't try to recompile dependencies
             ### see ASDF_OUTPUT_TRANSLATIONS
             output="$out/lib/common-lisp/${final.pname}"
             mkdir -p "$output"
 
             ## see ./setup-hook.sh
-            copyFilesPreservingDirs "$output" "${toString final.systemFiles} version.sexp ${toString final.extraFiles}"
+            copyFilesPreservingDirs "$output"
             #cp -r ./. $out/lib/common-lisp/${final.pname}
 
             ### reset all timestamps before build
             find $out/ -name \*.\* -print | xargs -n1 touch -m --date=@0
+
+            ## write all dependencies as configs and use XDG_CONFIG_DIRS with patched ASDF,
+            ## so we don't clutter CL_SOURCE_REGISTRY and ASDF_OUTPUT_TRANSLATIONS
+            mkdir -p "$out/share/common-lisp/source-registry.conf.d"
+            mkdir -p "$out/share/common-lisp/asdf-output-translations.conf.d"
+            outputLispConfigs "$out"
 
             ${compiler}/bin/${compiler.pname} ${toString final.extraCompilerArgs} <<EOF
 
@@ -81,7 +77,8 @@ let builder =
 
               (handler-case
                   (progn
-                    (dolist (s '(${toString (lib.flatten (map (p: p.providedSystems) final.preLoad))}))
+                    (dolist (s '(${toString (lib.flatten
+                      (map (p: p.providedSystems) final.preLoad))}))
                       (asdf:load-system s))
 
                     (dolist (s '(${toString final.providedSystems}))
@@ -101,16 +98,10 @@ let builder =
           installPhase = with builtins; ''
             runHook preInstall
             ### propagate lisp dependencies
-            ## list immediate dependencies
-            mkdir -p $out/nix-support
-            printWords ${toString final.lispInputs} > $out/nix-support/lisp-inputs
-            ## list propagated dependencies
-            printWords ${toString final.propagatedBuildInputs} > $out/nix-support/propagated-build-inputs
-
-            ## write all dependencies as configs,
-            ## so we don't clutter CL_SOURCE_REGISTRY and ASDF_OUTPUT_TRANSLATIONS
-            mkdir -p $out/share/common-lisp/{source-registry.conf.d,asdf-output-translations.conf.d}
-            outputLispConfigs "$out ${toString final.lispInputs}"
+            nix="$out/nix-support"
+            mkdir -p "$nix"
+            printWords ${toString (final.lispInputs ++ final.propagatedBuildInputs)} \
+              > $nix/propagated-build-inputs
 
             ## remove unneeded files
             rm -rf $out/.cache

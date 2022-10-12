@@ -1,25 +1,6 @@
-# This setup hook adds every propagated lisp system to CL_SOURCE_REGISTRY and ASDF_OUTPUT_TRANSLATIONS
-
-addToSearchPathWithCustomDelimiter_unsafe () {
-    local delimiter="$1"
-    local varName="$2"
-    local dir="$3"
-    # local mapping="((\"$dir/\" :**/) (\"$dir/\" :**/))"
-    # if [[ -d "$dir" && "${!varName:+${delimiter}${!varName}${delimiter}}" \
-    #       != *"${delimiter}${dir}${delimiter}"* ]]; then
-    #     export "${varName}=${!varName:+${!varName}${delimiter}}${mapping}"
-    # fi
-    if [[ -d "$dir" && "${!varName:+${delimiter}${!varName}${delimiter}}" \
-          != *"${delimiter}${dir}${delimiter}"* ]]; then
-        export "${varName}=${!varName:+${!varName}${delimiter}}${dir}${delimiter}${dir}"
-    fi
-}
-
 copyFilesPreservingDirs () {
     local to="$1"
-    local files="$2"
-    for file in ${files[@]}; do
-        # local implFiles=`locateImplementationFilesInDir "$filedir"`
+    for file in $systemFiles $extraFiles; do
         if [ -f "$file" ]; then
             local filedir=`dirname $file`
             mkdir -p "$to"/"$filedir"
@@ -35,109 +16,48 @@ copyFilesPreservingDirs () {
     done
 }
 
-# locateImplementationFilesInDir () {
-#     local dir="$1"
-#     declare -a implementationList=(abcl \
-#                                        acl \
-#                                        allegro \
-#                                        ccl \
-#                                        clasp \
-#                                        clisp \
-#                                        clozure \
-#                                        cmu \
-#                                        cmucl \
-#                                        corman \
-#                                        cormanlisp \
-#                                        ecl \
-#                                        gcl \
-#                                        genera \
-#                                        mezzano \
-#                                        lispworks \
-#                                        lispworks-personal-edition \
-#                                        lw \
-#                                        lwpe \
-#                                        mcl \
-#                                        mkcl \
-#                                        openmcl \
-#                                        sbcl \
-#                                        scl \
-#                                        smbx \
-#                                        symbolics \
-#                                        xcl )
-#     declare -a implementationFiles=()
-#     for impl in ${implementationList[@]}; do
-#         if [ -d "$dir" ]; then
-#             local file=`find "$dir" -maxdepth 1 -name "*$impl*"`
-#             [ -f "$file" ] && implementationFiles+=("$file")
-#         fi
-#     done
-#     echo ${implementationFiles[@]}
-# }
-
 outputLispConfigs () {
-    local lispInputs="$1"
+    local extra="$1"
     declare -A lispPathsSeen=()
-    for system in $lispInputs; do
+    for system in $extra $lispInputs; do
         _outputLispConfigs $system
     done
+    addToSearchPath "XDG_CONFIG_DIRS" "$out/share"
 }
 
 _outputLispConfigs ()  {
     local system="$1"
+    local sr="share/common-lisp/source-registry.conf.d"
+    local aot="share/common-lisp/asdf-output-translations.conf.d"
     if [ -v lispPathsSeen[$system] ]; then
         return
     else
         lispPathsSeen[$system]=1
-        local lisp_path="$system"
-        if [ -d "$lisp_path" ]; then
-            echo "(:tree \"$lisp_path\")" > "$out/share/common-lisp/source-registry.conf.d/$(stripHash $lisp_path).conf"
-            echo "(\"$lisp_path\" t)" > "$out/share/common-lisp/asdf-output-translations.conf.d/$(stripHash $lisp_path).conf"
-            local prop="$system/nix-support/lisp-inputs"
-            if [ -e "$prop" ]; then
-                local new_system
-                for new_system in $(cat $prop); do
-                    _outputLispConfigs "$new_system"
-                done
+        if [ -d "$system" ]; then
+            local srfile="$out/$sr/$(stripHash $system).conf"
+            local aotfile="$out/$aot/$(stripHash $system).conf"
+            [ ! -f "$srfile" ] && echo "(:tree \"$system\")" > "$srfile"
+            [ ! -f "$aotfile" ] && echo "(\"$system\" t)" > "$aotfile"
+            if [ ! "$system" = "$out" ]; then
+                if [[ -d "$system/$sr" && -d "$system/$aot" ]]; then
+                    find "$system/$sr" -name "*" -type f,l -exec \
+                         ln -sf {} "$out/$sr/" \;
+                    find "$system/$aot" -name "*" -type f,l -exec \
+                         ln -sf {} "$out/$aot/" \;
+                fi
             fi
         fi
     fi
 }
 
 buildPathsForLisp () {
-    local lispInputs="$1"
-    local buildInputs="$2"
-    local propagatedBuildInputs="$3"
     declare -A lispPathsSeen=()
     declare -A extPathsSeen=()
-    for system in $lispInputs; do
-        _addToLispPath $system
-    done
 
     for package in $lispInputs $buildInputs $propagatedBuildInputs; do
         _addToExternalPath $package
     done
-}
-
-_addToLispPath ()  {
-    local system="$1"
-    if [ -v lispPathsSeen[$system] ]; then
-        return
-    else
-        lispPathsSeen[$system]=1
-        local lisp_path="$system"
-        if [ -d "$lisp_path" ]; then
-            addToSearchPath "XDG_CONFIG_DIRS" "$lisp_path/share"
-            # addToSearchPath "CL_SOURCE_REGISTRY" "$lisp_path//"
-            # addToSearchPathWithCustomDelimiter_unsafe ":" "ASDF_OUTPUT_TRANSLATIONS" "$lisp_path/"
-            # local prop="$system/nix-support/lisp-inputs"
-            # if [ -e "$prop" ]; then
-            #     local new_system
-            #     for new_system in $(cat $prop); do
-            #         _addToLispPath "$new_system"
-            #     done
-            # fi
-        fi
-    fi
+    export HOME="$out"
 }
 
 _addToExternalPath () {
@@ -160,13 +80,6 @@ _addToExternalPath () {
         if [ -d "$inc_path" ]; then
             addToSearchPath "CPATH" "$inc_path"
         fi
-        local lisp="$package/nix-support/lisp-inputs"
-        if [ -e "$lisp" ]; then
-            local new_system
-            for new_system in $(cat $lisp); do
-                _addToExternalPath "$new_system"
-            done
-        fi
         local prop="$package/nix-support/propagated-build-inputs"
         if [ -e "$prop" ]; then
             local new_package
@@ -177,5 +90,4 @@ _addToExternalPath () {
     fi
 }
 
-# NOTE: we call buildLispPathsForLisp manually in buildPhase to avoid recursion
-# addEnvHooks "$targetOffset" buildPathsForLisp
+addEnvHooks "$targetOffset" buildPathsForLisp
