@@ -12,7 +12,10 @@
         pkgs = nixpkgs.legacyPackages.${system};
         lispPackages = import ./default.nix { inherit pkgs; };
       in
-        lispPackages // {
+        {
+          packages = lispPackages // {
+            nyxt-gtk = lispPackages.sbclPackages.nyxt-gtk;
+          };
           overlay = self: super: { inherit lispPackages; };
         }
     );
